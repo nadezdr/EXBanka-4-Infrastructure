@@ -319,6 +319,7 @@ services:
       LOAN_SERVICE_ADDR: loan-service:50058
       CARD_SERVICE_ADDR: card-service:50059
       JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: http://localhost:3000
     depends_on:
       employee-service:
         condition: service_started
