@@ -1,0 +1,376 @@
+services:
+
+  # ────────────────────────────────────────────────────────────
+  # Databases
+  # ────────────────────────────────────────────────────────────
+
+  employee-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: employee_user
+      POSTGRES_PASSWORD: employee_pass
+      POSTGRES_DB: employee_db
+    volumes:
+      - employee-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/employee-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U employee_user -d employee_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/auth-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  client-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: client_user
+      POSTGRES_PASSWORD: client_pass
+      POSTGRES_DB: client_db
+    volumes:
+      - client-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/client-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U client_user -d client_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  account-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: account_user
+      POSTGRES_PASSWORD: account_pass
+      POSTGRES_DB: account_db
+    volumes:
+      - account-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/account-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U account_user -d account_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  payment-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_pass
+      POSTGRES_DB: payment_db
+    volumes:
+      - payment-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/payment-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_user -d payment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  exchange-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: exchange_user
+      POSTGRES_PASSWORD: exchange_pass
+      POSTGRES_DB: exchange_db
+    volumes:
+      - exchange-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/exchange-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exchange_user -d exchange_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  loan-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: loan_user
+      POSTGRES_PASSWORD: loan_pass
+      POSTGRES_DB: loan_db
+    volumes:
+      - loan-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/loan-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loan_user -d loan_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  card-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: card_user
+      POSTGRES_PASSWORD: card_pass
+      POSTGRES_DB: card_db
+    volumes:
+      - card-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/card-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U card_user -d card_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  # ────────────────────────────────────────────────────────────
+  # RabbitMQ
+  # ────────────────────────────────────────────────────────────
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  # ────────────────────────────────────────────────────────────
+  # Go services
+  # ────────────────────────────────────────────────────────────
+
+  employee-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/employee-service/Dockerfile
+    environment:
+      DB_URL: postgres://employee_user:employee_pass@employee-db:5432/employee_db?sslmode=disable
+    depends_on:
+      employee-db:
+        condition: service_healthy
+    networks: [exbanka-net]
+
+  client-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/client-service/Dockerfile
+    environment:
+      DB_URL: postgres://client_user:client_pass@client-db:5432/client_db?sslmode=disable
+    depends_on:
+      client-db:
+        condition: service_healthy
+    networks: [exbanka-net]
+
+  email-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/email-service/Dockerfile
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      FROM_EMAIL: ${FROM_EMAIL}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks: [exbanka-net]
+
+  auth-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      DB_URL: postgres://auth_user:auth_pass@auth-db:5432/auth_db?sslmode=disable
+      CLIENT_SERVICE_ADDR: client-service:50056
+      EMPLOYEE_SERVICE_ADDR: employee-service:50051
+      EMAIL_SERVICE_ADDR: email-service:50053
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      client-service:
+        condition: service_started
+      employee-service:
+        condition: service_started
+      email-service:
+        condition: service_started
+    networks: [exbanka-net]
+
+  account-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/account-service/Dockerfile
+    environment:
+      ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
+      CLIENT_DB_URL: postgres://client_user:client_pass@client-db:5432/client_db?sslmode=disable
+      EXCHANGE_DB_URL: postgres://exchange_user:exchange_pass@exchange-db:5432/exchange_db?sslmode=disable
+      EMAIL_SERVICE_ADDR: email-service:50053
+    depends_on:
+      account-db:
+        condition: service_healthy
+      client-db:
+        condition: service_healthy
+      exchange-db:
+        condition: service_healthy
+      email-service:
+        condition: service_started
+    networks: [exbanka-net]
+
+  payment-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/payment-service/Dockerfile
+    environment:
+      PAYMENT_DB_URL: postgres://payment_user:payment_pass@payment-db:5432/payment_db?sslmode=disable
+      ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
+      EXCHANGE_DB_URL: postgres://exchange_user:exchange_pass@exchange-db:5432/exchange_db?sslmode=disable
+      CLIENT_DB_URL: postgres://client_user:client_pass@client-db:5432/client_db?sslmode=disable
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      account-db:
+        condition: service_healthy
+      exchange-db:
+        condition: service_healthy
+      client-db:
+        condition: service_healthy
+    networks: [exbanka-net]
+
+  exchange-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/exchange-service/Dockerfile
+    environment:
+      EXCHANGE_DB_URL: postgres://exchange_user:exchange_pass@exchange-db:5432/exchange_db?sslmode=disable
+      ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
+    depends_on:
+      exchange-db:
+        condition: service_healthy
+      account-db:
+        condition: service_healthy
+    networks: [exbanka-net]
+
+  loan-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/loan-service/Dockerfile
+    environment:
+      LOAN_DB_URL: postgres://loan_user:loan_pass@loan-db:5432/loan_db?sslmode=disable
+      ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
+      EXCHANGE_DB_URL: postgres://exchange_user:exchange_pass@exchange-db:5432/exchange_db?sslmode=disable
+      EMAIL_SERVICE_ADDR: email-service:50053
+      CLIENT_SERVICE_ADDR: client-service:50056
+    depends_on:
+      loan-db:
+        condition: service_healthy
+      account-db:
+        condition: service_healthy
+      exchange-db:
+        condition: service_healthy
+      email-service:
+        condition: service_started
+      client-service:
+        condition: service_started
+    networks: [exbanka-net]
+
+  card-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/card-service/Dockerfile
+    environment:
+      CARD_DB_URL: postgres://card_user:card_pass@card-db:5432/card_db?sslmode=disable
+      ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
+    depends_on:
+      card-db:
+        condition: service_healthy
+      account-db:
+        condition: service_healthy
+    networks: [exbanka-net]
+
+  api-gateway:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      EMPLOYEE_SERVICE_ADDR: employee-service:50051
+      AUTH_SERVICE_ADDR: auth-service:50052
+      EMAIL_SERVICE_ADDR: email-service:50053
+      ACCOUNT_SERVICE_ADDR: account-service:50054
+      PAYMENT_SERVICE_ADDR: payment-service:50055
+      CLIENT_SERVICE_ADDR: client-service:50056
+      EXCHANGE_SERVICE_ADDR: exchange-service:50057
+      LOAN_SERVICE_ADDR: loan-service:50058
+      CARD_SERVICE_ADDR: card-service:50059
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      employee-service:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      email-service:
+        condition: service_started
+      account-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      client-service:
+        condition: service_started
+      exchange-service:
+        condition: service_started
+      loan-service:
+        condition: service_started
+      card-service:
+        condition: service_started
+    networks: [exbanka-net]
+
+  # ────────────────────────────────────────────────────────────
+  # Frontend
+  # ────────────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context: ../EXBanka-4-Frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8083
+    ports:
+      - "3000:80"
+    depends_on:
+      api-gateway:
+        condition: service_started
+    networks: [exbanka-net]
+
+# ────────────────────────────────────────────────────────────
+# Networks & Volumes
+# ────────────────────────────────────────────────────────────
+
+networks:
+  exbanka-net:
+    driver: bridge
+
+volumes:
+  employee-db-data:
+  auth-db-data:
+  client-db-data:
+  account-db-data:
+  payment-db-data:
+  exchange-db-data:
+  loan-db-data:
+  card-db-data:
