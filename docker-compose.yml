@@ -318,6 +318,7 @@ services:
       EXCHANGE_SERVICE_ADDR: exchange-service:50057
       LOAN_SERVICE_ADDR: loan-service:50058
       CARD_SERVICE_ADDR: card-service:50059
+      SECURITIES_SERVICE_ADDR: securities-service:50060
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: http://localhost:3000
     depends_on:
@@ -339,6 +340,35 @@ services:
         condition: service_started
       card-service:
         condition: service_started
+      securities-service:
+        condition: service_started
+    networks: [exbanka-net]
+
+  securities-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: securities_user
+      POSTGRES_PASSWORD: securities_pass
+      POSTGRES_DB: securities_db
+    volumes:
+      - securities-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/securities-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U securities_user -d securities_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  securities-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/securities-service/Dockerfile
+    environment:
+      SECURITIES_DB_URL: postgres://securities_user:securities_pass@securities-db:5432/securities_db?sslmode=disable
+    depends_on:
+      securities-db:
+        condition: service_healthy
     networks: [exbanka-net]
 
   # ────────────────────────────────────────────────────────────
@@ -375,3 +405,4 @@ volumes:
   exchange-db-data:
   loan-db-data:
   card-db-data:
+  securities-db-data:
