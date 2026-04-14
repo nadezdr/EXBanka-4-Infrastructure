@@ -368,6 +368,7 @@ services:
       SECURITIES_DB_URL: postgres://securities_user:securities_pass@securities-db:5432/securities_db?sslmode=disable
       EMPLOYEE_SERVICE_ADDR: employee-service:50051
       ALPACA_API_KEY: ${ALPACA_API_KEY}
+      ALPACA_API_SECRET_KEY: ${ALPACA_API_SECRET_KEY}
       ALPHAVANTAGE_API_KEY: ${ALPHAVANTAGE_API_KEY}
     depends_on:
       securities-db:
