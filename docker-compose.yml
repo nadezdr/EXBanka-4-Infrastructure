@@ -319,6 +319,7 @@ services:
       LOAN_SERVICE_ADDR: loan-service:50058
       CARD_SERVICE_ADDR: card-service:50059
       SECURITIES_SERVICE_ADDR: securities-service:50060
+      ORDER_SERVICE_ADDR: order-service:50061
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: http://localhost:3000
     depends_on:
@@ -342,6 +343,24 @@ services:
         condition: service_started
       securities-service:
         condition: service_started
+      order-service:
+        condition: service_started
+    networks: [exbanka-net]
+
+  order-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_pass
+      POSTGRES_DB: order_db
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/order-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks: [exbanka-net]
 
   securities-db:
@@ -372,6 +391,38 @@ services:
     depends_on:
       securities-db:
         condition: service_healthy
+      employee-service:
+        condition: service_started
+    networks: [exbanka-net]
+
+  order-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/order-service/Dockerfile
+    environment:
+      ORDER_DB_URL: postgres://order_user:order_pass@order-db:5432/order_db?sslmode=disable
+      ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
+      SECURITIES_DB_URL: postgres://securities_user:securities_pass@securities-db:5432/securities_db?sslmode=disable
+      EXCHANGE_DB_URL: postgres://exchange_user:exchange_pass@exchange-db:5432/exchange_db?sslmode=disable
+      EMPLOYEE_DB_URL: postgres://employee_user:employee_pass@employee-db:5432/employee_db?sslmode=disable
+      SECURITIES_SERVICE_ADDR: securities-service:50060
+      LOAN_SERVICE_ADDR: loan-service:50058
+      EMPLOYEE_SERVICE_ADDR: employee-service:50051
+    depends_on:
+      order-db:
+        condition: service_healthy
+      account-db:
+        condition: service_healthy
+      securities-db:
+        condition: service_healthy
+      exchange-db:
+        condition: service_healthy
+      employee-db:
+        condition: service_healthy
+      securities-service:
+        condition: service_started
+      loan-service:
+        condition: service_started
       employee-service:
         condition: service_started
     networks: [exbanka-net]
@@ -410,4 +461,5 @@ volumes:
   exchange-db-data:
   loan-db-data:
   card-db-data:
+  order-db-data:
   securities-db-data:
