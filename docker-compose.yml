@@ -138,6 +138,9 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
+    hostname: rabbitmq
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -320,6 +323,7 @@ services:
       CARD_SERVICE_ADDR: card-service:50059
       SECURITIES_SERVICE_ADDR: securities-service:50060
       ORDER_SERVICE_ADDR: order-service:50061
+      PORTFOLIO_SERVICE_ADDR: portfolio-service:50062
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: http://localhost:3000
     depends_on:
@@ -344,6 +348,8 @@ services:
       securities-service:
         condition: service_started
       order-service:
+        condition: service_started
+      portfolio-service:
         condition: service_started
     networks: [exbanka-net]
 
@@ -498,3 +504,4 @@ volumes:
   order-db-data:
   securities-db-data:
   portfolio-db-data:
+  rabbitmq-data:
