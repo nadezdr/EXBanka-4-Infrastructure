@@ -462,5 +462,5 @@ volumes:
   exchange-db-data:
   loan-db-data:
   card-db-data:
-  securities-db-data:
   order-db-data:
+  securities-db-data:
