@@ -347,22 +347,6 @@ services:
         condition: service_started
     networks: [exbanka-net]
 
-  order-db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: order_user
-      POSTGRES_PASSWORD: order_pass
-      POSTGRES_DB: order_db
-    volumes:
-      - order-db-data:/var/lib/postgresql/data
-      - ../EXBanka-4-Backend/services/order-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks: [exbanka-net]
-
   securities-db:
     image: postgres:16-alpine
     environment:
@@ -387,12 +371,29 @@ services:
       SECURITIES_DB_URL: postgres://securities_user:securities_pass@securities-db:5432/securities_db?sslmode=disable
       EMPLOYEE_SERVICE_ADDR: employee-service:50051
       ALPACA_API_KEY: ${ALPACA_API_KEY}
+      ALPACA_API_SECRET_KEY: ${ALPACA_API_SECRET_KEY}
       ALPHAVANTAGE_API_KEY: ${ALPHAVANTAGE_API_KEY}
     depends_on:
       securities-db:
         condition: service_healthy
       employee-service:
         condition: service_started
+    networks: [exbanka-net]
+
+  order-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_pass
+      POSTGRES_DB: order_db
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/order-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks: [exbanka-net]
 
   order-service:
@@ -463,3 +464,4 @@ volumes:
   card-db-data:
   order-db-data:
   securities-db-data:
+  order-db-data:
