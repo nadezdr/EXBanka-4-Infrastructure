@@ -409,6 +409,7 @@ services:
       SECURITIES_SERVICE_ADDR: securities-service:50060
       LOAN_SERVICE_ADDR: loan-service:50058
       EMPLOYEE_SERVICE_ADDR: employee-service:50051
+      PORTFOLIO_SERVICE_ADDR: portfolio-service:50062
     depends_on:
       order-db:
         condition: service_healthy
@@ -426,6 +427,35 @@ services:
         condition: service_started
       employee-service:
         condition: service_started
+      portfolio-service:
+        condition: service_started
+    networks: [exbanka-net]
+
+  portfolio-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: portfolio_user
+      POSTGRES_PASSWORD: portfolio_pass
+      POSTGRES_DB: portfolio_db
+    volumes:
+      - portfolio-db-data:/var/lib/postgresql/data
+      - ../EXBanka-4-Backend/services/portfolio-service/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio_user -d portfolio_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  portfolio-service:
+    build:
+      context: ../EXBanka-4-Backend
+      dockerfile: services/portfolio-service/Dockerfile
+    environment:
+      PORTFOLIO_DB_URL: postgres://portfolio_user:portfolio_pass@portfolio-db:5432/portfolio_db?sslmode=disable
+    depends_on:
+      portfolio-db:
+        condition: service_healthy
     networks: [exbanka-net]
 
   # ────────────────────────────────────────────────────────────
@@ -464,3 +494,4 @@ volumes:
   card-db-data:
   order-db-data:
   securities-db-data:
+  portfolio-db-data:
