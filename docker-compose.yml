@@ -415,6 +415,7 @@ services:
       SECURITIES_SERVICE_ADDR: securities-service:50060
       LOAN_SERVICE_ADDR: loan-service:50058
       EMPLOYEE_SERVICE_ADDR: employee-service:50051
+      EXCHANGE_SERVICE_ADDR: exchange-service:50057
       PORTFOLIO_SERVICE_ADDR: portfolio-service:50062
     depends_on:
       order-db:
@@ -432,6 +433,8 @@ services:
       loan-service:
         condition: service_started
       employee-service:
+        condition: service_started
+      exchange-service:
         condition: service_started
       portfolio-service:
         condition: service_started
