@@ -462,11 +462,20 @@ services:
       dockerfile: services/portfolio-service/Dockerfile
     environment:
       PORTFOLIO_DB_URL: postgres://portfolio_user:portfolio_pass@portfolio-db:5432/portfolio_db?sslmode=disable
+      ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
+      EXCHANGE_DB_URL: postgres://exchange_user:exchange_pass@exchange-db:5432/exchange_db?sslmode=disable
       SECURITIES_SERVICE_ADDR: securities-service:50060
+      EXCHANGE_SERVICE_ADDR: exchange-service:50057
     depends_on:
       portfolio-db:
         condition: service_healthy
+      account-db:
+        condition: service_healthy
+      exchange-db:
+        condition: service_healthy
       securities-service:
+        condition: service_started
+      exchange-service:
         condition: service_started
     networks: [exbanka-net]
 
