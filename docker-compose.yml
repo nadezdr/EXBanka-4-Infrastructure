@@ -152,6 +152,23 @@ services:
     networks: [exbanka-net]
 
   # ────────────────────────────────────────────────────────────
+  # Redis
+  # ────────────────────────────────────────────────────────────
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [exbanka-net]
+
+  # ────────────────────────────────────────────────────────────
   # Go services
   # ────────────────────────────────────────────────────────────
 
@@ -203,6 +220,7 @@ services:
       EMPLOYEE_SERVICE_ADDR: employee-service:50051
       EMAIL_SERVICE_ADDR: email-service:50053
       JWT_SECRET: ${JWT_SECRET}
+      REDIS_ADDR: redis:6379
     depends_on:
       auth-db:
         condition: service_healthy
@@ -212,6 +230,8 @@ services:
         condition: service_started
       email-service:
         condition: service_started
+      redis:
+        condition: service_healthy
     networks: [exbanka-net]
 
   account-service:
@@ -261,10 +281,13 @@ services:
     environment:
       EXCHANGE_DB_URL: postgres://exchange_user:exchange_pass@exchange-db:5432/exchange_db?sslmode=disable
       ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
+      REDIS_ADDR: redis:6379
     depends_on:
       exchange-db:
         condition: service_healthy
       account-db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks: [exbanka-net]
 
@@ -328,6 +351,7 @@ services:
       FUND_SERVICE_ADDR: fund-service:50064
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: http://localhost:3000
+      REDIS_ADDR: redis:6379
     depends_on:
       employee-service:
         condition: service_started
@@ -357,6 +381,8 @@ services:
         condition: service_started
       fund-service:
         condition: service_started
+      redis:
+        condition: service_healthy
     networks: [exbanka-net]
 
   securities-db:
@@ -385,11 +411,14 @@ services:
       ALPACA_API_KEY: ${ALPACA_API_KEY}
       ALPACA_API_SECRET_KEY: ${ALPACA_API_SECRET_KEY}
       ALPHAVANTAGE_API_KEY: ${ALPHAVANTAGE_API_KEY}
+      REDIS_ADDR: redis:6379
     depends_on:
       securities-db:
         condition: service_healthy
       employee-service:
         condition: service_started
+      redis:
+        condition: service_healthy
     networks: [exbanka-net]
 
   order-db:
@@ -609,3 +638,4 @@ volumes:
   otc-db-data:
   fund-db-data:
   rabbitmq-data:
+  redis-data:
