@@ -590,6 +590,7 @@ services:
       ACCOUNT_SERVICE_ADDR: account-service:50054
       ORDER_SERVICE_ADDR: order-service:50061
       EXCHANGE_SERVICE_ADDR: exchange-service:50057
+      SECURITIES_SERVICE_ADDR: securities-service:50060
     depends_on:
       fund-db:
         condition: service_healthy
@@ -602,6 +603,8 @@ services:
       account-service:
         condition: service_started
       exchange-service:
+        condition: service_started
+      securities-service:
         condition: service_started
     networks: [exbanka-net]
 
