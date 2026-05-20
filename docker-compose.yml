@@ -357,6 +357,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: http://localhost:3000
       REDIS_ADDR: redis:6379
+      OWN_INTERBANK_API_KEY: "placeholder-own-key"
     depends_on:
       employee-service:
         condition: service_started
