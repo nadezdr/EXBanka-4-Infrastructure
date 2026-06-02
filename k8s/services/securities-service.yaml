@@ -43,6 +43,11 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: ALPHAVANTAGE_API_KEY
+            - name: REDIS_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: REDIS_ADDR
           resources:
             requests:
               cpu: "50m"

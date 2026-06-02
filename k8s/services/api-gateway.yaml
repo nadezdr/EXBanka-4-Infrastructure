@@ -98,6 +98,16 @@ spec:
                 configMapKeyRef:
                   name: service-config
                   key: FRONTEND_URL
+            - name: REDIS_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: REDIS_ADDR
+            - name: OWN_INTERBANK_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: OWN_INTERBANK_API_KEY
           resources:
             requests:
               cpu: "50m"

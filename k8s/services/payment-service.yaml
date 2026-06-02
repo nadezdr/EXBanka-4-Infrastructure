@@ -38,6 +38,31 @@ spec:
                 secretKeyRef:
                   name: db-secrets
                   key: client-db-url
+            - name: OWN_ROUTING_NUMBER
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: OWN_ROUTING_NUMBER
+            - name: PARTNER_ROUTING_NUMBER
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: PARTNER_ROUTING_NUMBER
+            - name: PARTNER_BANK_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: PARTNER_BANK_NAME
+            - name: PARTNER_BANK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: PARTNER_BANK_URL
+            - name: PARTNER_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: PARTNER_API_KEY
           resources:
             requests:
               cpu: "50m"
