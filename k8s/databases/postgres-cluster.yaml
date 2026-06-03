@@ -1,0 +1,723 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exbanka-init-sql
+  namespace: exbanka-4
+data:
+  init.sql: |
+    \c account_db
+    CREATE TABLE activity_codes (
+        code        VARCHAR PRIMARY KEY,
+        description VARCHAR NOT NULL
+    );
+    
+    INSERT INTO activity_codes (code, description) VALUES
+      ('01.1',  'Gajenje jednogodišnjih biljaka'),
+      ('10.1',  'Prerada i konzerviranje mesa'),
+      ('41.2',  'Izgradnja stambenih i nestambenih zgrada'),
+      ('45.1',  'Trgovina motornim vozilima'),
+      ('46.1',  'Posredovanje u trgovini'),
+      ('47.1',  'Trgovina na malo u nespecijalizovanim prodavnicama'),
+      ('56.1',  'Delatnost restorana i pokretnih ugostiteljskih objekata'),
+      ('62.01', 'Računarsko programiranje'),
+      ('62.02', 'Konsultantske delatnosti u oblasti informacione tehnologije'),
+      ('64.19', 'Ostalo monetarno posredovanje'),
+      ('69.1',  'Pravne delatnosti'),
+      ('70.2',  'Konsultantske delatnosti u oblasti poslovanja'),
+      ('85.3',  'Srednje obrazovanje'),
+      ('86.1',  'Bolničke delatnosti'),
+      ('96.0',  'Ostale lične uslužne delatnosti')
+    ON CONFLICT (code) DO NOTHING;
+    
+    CREATE TABLE companies (
+        id                  BIGSERIAL PRIMARY KEY,
+        name                VARCHAR NOT NULL,
+        registration_number VARCHAR NOT NULL UNIQUE,
+        pib                 VARCHAR NOT NULL UNIQUE,
+        activity_code       VARCHAR REFERENCES activity_codes(code),
+        address             VARCHAR,
+        owner_client_id     BIGINT NOT NULL
+    );
+    
+    CREATE TABLE accounts (
+        id                  BIGSERIAL PRIMARY KEY,
+        account_number      VARCHAR NOT NULL UNIQUE,
+        account_name        VARCHAR,
+        owner_id            BIGINT NOT NULL,
+        employee_id         BIGINT NOT NULL,
+        currency_id         BIGINT NOT NULL,
+        account_type        VARCHAR NOT NULL,
+        account_subtype     VARCHAR,
+        status              VARCHAR NOT NULL DEFAULT 'ACTIVE',
+        balance             NUMERIC(20, 2) NOT NULL DEFAULT 0,
+        available_balance   NUMERIC(20, 2) NOT NULL DEFAULT 0,
+        created_date        DATE NOT NULL DEFAULT CURRENT_DATE,
+        expiration_date     DATE,
+        daily_limit         NUMERIC(20, 2),
+        monthly_limit       NUMERIC(20, 2),
+        daily_spent         NUMERIC(20, 2) NOT NULL DEFAULT 0,
+        monthly_spent       NUMERIC(20, 2) NOT NULL DEFAULT 0,
+        maintenance_fee     NUMERIC(20, 2) NOT NULL DEFAULT 0,
+        company_id          BIGINT REFERENCES companies(id)
+    );
+    
+    INSERT INTO accounts (account_number, account_name, owner_id, employee_id, currency_id, account_type, balance, available_balance)
+    VALUES
+      ('BANK-RSD-001', 'Bank Internal RSD Account', 0, 0, 1, 'BANK', 1000000000, 1000000000),
+      ('BANK-EUR-001', 'Bank Internal EUR Account', 0, 0, 2, 'BANK', 10000000,   10000000),
+      ('BANK-CHF-001', 'Bank Internal CHF Account', 0, 0, 3, 'BANK', 10000000,   10000000),
+      ('BANK-USD-001', 'Bank Internal USD Account', 0, 0, 4, 'BANK', 10000000,   10000000),
+      ('BANK-GBP-001', 'Bank Internal GBP Account', 0, 0, 5, 'BANK', 10000000,   10000000),
+      ('BANK-JPY-001', 'Bank Internal JPY Account', 0, 0, 6, 'BANK', 1000000000, 1000000000),
+      ('BANK-CAD-001', 'Bank Internal CAD Account', 0, 0, 7, 'BANK', 10000000,   10000000),
+      ('BANK-AUD-001', 'Bank Internal AUD Account', 0, 0, 8, 'BANK', 10000000,   10000000)
+    ON CONFLICT (account_number) DO NOTHING;
+    
+    INSERT INTO accounts (account_number, account_name, owner_id, employee_id, currency_id, account_type, balance, available_balance)
+    VALUES ('STATE-RSD-001', 'State RSD Account', 0, 0, 1, 'STATE', 0, 0)
+    ON CONFLICT (account_number) DO NOTHING;
+    
+    \c auth_db
+    CREATE TABLE activation_tokens (
+        token       VARCHAR PRIMARY KEY,
+        employee_id BIGINT      NOT NULL,
+        expires_at  TIMESTAMPTZ NOT NULL
+    );
+    
+    INSERT INTO activation_tokens (token, employee_id, expires_at) VALUES
+      ('cypress-valid-token-s8',   100, '2099-12-31 23:59:59+00'),
+      ('cypress-expired-token-s9', 101, '2020-01-01 00:00:00+00')
+    ON CONFLICT (token) DO NOTHING;
+    
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        token       VARCHAR PRIMARY KEY,
+        employee_id BIGINT      NOT NULL,
+        expires_at  TIMESTAMPTZ NOT NULL
+    );
+    
+    CREATE TABLE IF NOT EXISTS client_activation_tokens (
+        token      VARCHAR PRIMARY KEY,
+        client_id  BIGINT      NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL
+    );
+    
+    CREATE TABLE IF NOT EXISTS two_factor_approvals (
+        id          BIGSERIAL    PRIMARY KEY,
+        client_id   BIGINT       NOT NULL,
+        action_type VARCHAR      NOT NULL,
+        payload     TEXT         NOT NULL DEFAULT '{}',
+        status      VARCHAR      NOT NULL DEFAULT 'PENDING',
+        created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+        expires_at  TIMESTAMPTZ  NOT NULL DEFAULT now() + interval '5 minutes'
+    );
+    
+    CREATE TABLE IF NOT EXISTS push_tokens (
+        client_id   BIGINT   PRIMARY KEY,
+        token       VARCHAR  NOT NULL
+    );
+    
+    \c card_db
+    CREATE TABLE authorized_persons (
+        id             BIGSERIAL PRIMARY KEY,
+        first_name     VARCHAR NOT NULL,
+        last_name      VARCHAR NOT NULL,
+        date_of_birth  DATE    NOT NULL,
+        gender         VARCHAR NOT NULL,
+        email          VARCHAR NOT NULL,
+        phone_number   VARCHAR NOT NULL,
+        address        VARCHAR NOT NULL,
+        account_number VARCHAR NOT NULL
+    );
+    
+    CREATE TABLE card_requests (
+        id                     BIGSERIAL    PRIMARY KEY,
+        request_token          VARCHAR      NOT NULL UNIQUE,
+        account_number         VARCHAR      NOT NULL,
+        card_name              VARCHAR      NOT NULL,
+        caller_client_id       BIGINT       NOT NULL,
+        for_self               BOOLEAN      NOT NULL DEFAULT true,
+        authorized_person_data JSONB,
+        confirmation_code      VARCHAR      NOT NULL,
+        expires_at             TIMESTAMPTZ  NOT NULL,
+        used                   BOOLEAN      NOT NULL DEFAULT false
+    );
+    
+    CREATE TABLE cards (
+        id                   BIGSERIAL PRIMARY KEY,
+        card_number          VARCHAR       NOT NULL UNIQUE,
+        card_type            VARCHAR       NOT NULL DEFAULT 'DEBIT',
+        card_name            VARCHAR       NOT NULL,
+        created_at           TIMESTAMP     NOT NULL DEFAULT NOW(),
+        expiry_date          DATE          NOT NULL,
+        account_number       VARCHAR       NOT NULL,
+        cvv                  VARCHAR       NOT NULL,
+        card_limit           NUMERIC(20,2),
+        status               VARCHAR       NOT NULL DEFAULT 'ACTIVE',
+        authorized_person_id BIGINT        REFERENCES authorized_persons(id)
+    );
+    
+    \c client_db
+    CREATE TABLE clients (
+        id            BIGSERIAL PRIMARY KEY,
+        first_name    VARCHAR     NOT NULL,
+        last_name     VARCHAR     NOT NULL,
+        jmbg          VARCHAR(13) NOT NULL UNIQUE,
+        date_of_birth DATE        NOT NULL,
+        gender        VARCHAR     NOT NULL,
+        email         VARCHAR     NOT NULL UNIQUE,
+        phone_number  VARCHAR     NOT NULL,
+        address       VARCHAR     NOT NULL,
+        username      VARCHAR     NOT NULL UNIQUE,
+        password      VARCHAR,
+        active        BOOLEAN     NOT NULL DEFAULT false
+    );
+    
+    INSERT INTO clients (first_name, last_name, jmbg, date_of_birth, gender, email, phone_number, address, username, password, active)
+    SELECT 'Tara', 'Dunjic', '2809002785018', '2002-09-28', 'F', 'ddimitrijevi822rn@raf.rs', '+381601234567', 'Bulevar oslobodjenja 1, Beograd', 'ddimitrijevi822rn', '$2a$10$KZiA1q9EmV1PlRI0/m7i7e8a2GgitlGORbgHEbb9Y9ZUNYpxyfY.u', true
+    WHERE NOT EXISTS (SELECT 1 FROM clients WHERE email = 'ddimitrijevi822rn@raf.rs');
+    
+    \c employee_db
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    
+    CREATE TABLE employees (
+        id             BIGSERIAL PRIMARY KEY,
+        first_name     VARCHAR,
+        last_name      VARCHAR,
+        date_of_birth  DATE,
+        gender         VARCHAR,
+        email          VARCHAR UNIQUE,
+        phone_number   VARCHAR,
+        address        VARCHAR,
+        username       VARCHAR UNIQUE,
+        password       VARCHAR,
+        position       VARCHAR,
+        department     VARCHAR,
+        active         BOOLEAN,
+        permissions    TEXT[],
+        jmbg           VARCHAR(13) NOT NULL UNIQUE
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_employees_first_name ON employees (first_name);
+    CREATE INDEX IF NOT EXISTS idx_employees_last_name  ON employees (last_name);
+    CREATE INDEX IF NOT EXISTS idx_employees_position   ON employees (position);
+    
+    INSERT INTO employees (first_name, last_name, date_of_birth, gender, email, phone_number, address, username, password, position, department, active, permissions, jmbg)
+    SELECT 'Admin', 'Admin', '1990-01-01', 'M', 'admin@exbanka.com', '', '', 'admin', crypt('admin', gen_salt('bf', 10)), 'Administrator', 'IT', true, ARRAY['ADMIN', 'READ', 'WRITE', 'DELETE'], '0000000000001'
+    WHERE NOT EXISTS (SELECT 1 FROM employees WHERE username = 'admin');
+    
+    INSERT INTO employees (first_name, last_name, date_of_birth, gender, email, phone_number, address, username, password, position, department, active, permissions, jmbg)
+    SELECT 'Marko', 'Markovic', '1995-05-15', 'M', 'marko@banka.rs', '+381601111111', 'Knez Mihailova 1, Beograd', 'marko', crypt('marko123', gen_salt('bf', 10)), 'Agent', 'Retail', true, ARRAY['READ', 'WRITE'], '0000000000002'
+    WHERE NOT EXISTS (SELECT 1 FROM employees WHERE username = 'marko');
+    
+    INSERT INTO employees (first_name, last_name, date_of_birth, gender, email, phone_number, address, username, password, position, department, active, permissions, jmbg)
+    SELECT 'Luka', 'Lukovic', '1993-08-20', 'M', 'luka@banka.rs', '+381602222222', 'Terazije 5, Beograd', 'luka', crypt('luka123', gen_salt('bf', 10)), 'Agent', 'Retail', true, ARRAY['READ'], '0000000000003'
+    WHERE NOT EXISTS (SELECT 1 FROM employees WHERE username = 'luka');
+    
+    INSERT INTO employees (id, first_name, last_name, date_of_birth, gender, email, phone_number, address, username, password, position, department, active, permissions, jmbg)
+    VALUES (100, 'Cypress', 'Activate', '1990-01-01', 'M', 'cypress.activate@banka.rs', '', '', 'cypress_activate', NULL, 'Agent', 'IT', false, ARRAY['READ'], '0000000000004')
+    ON CONFLICT (id) DO NOTHING;
+    
+    INSERT INTO employees (id, first_name, last_name, date_of_birth, gender, email, phone_number, address, username, password, position, department, active, permissions, jmbg)
+    VALUES (101, 'Cypress', 'Expired', '1990-01-01', 'M', 'cypress.expired@banka.rs', '', '', 'cypress_expired', NULL, 'Agent', 'IT', false, ARRAY['READ'], '0000000000005')
+    ON CONFLICT (id) DO NOTHING;
+    
+    INSERT INTO employees (id, first_name, last_name, date_of_birth, gender, email, phone_number, address, username, password, position, department, active, permissions, jmbg)
+    VALUES (102, 'Petar', 'Petrovic', '1991-03-10', 'M', 'petar.petrovic@banka.rs', '', '', 'petar', NULL, 'Agent', 'Retail', false, ARRAY[]::TEXT[], '0000000000006')
+    ON CONFLICT (id) DO NOTHING;
+    
+    INSERT INTO employees (first_name, last_name, date_of_birth, gender, email, phone_number, address, username, password, position, department, active, permissions, jmbg)
+    SELECT 'Vasilije', 'Lupsic', '1988-03-22', 'M', 'vasa@banka.rs', '', '', 'vasilije', crypt('vasilije123', gen_salt('bf', 10)), 'Supervisor', 'Retail', true, ARRAY['SUPERVISOR'], '0000000000007'
+    WHERE NOT EXISTS (SELECT 1 FROM employees WHERE username = 'vasilije');
+    
+    INSERT INTO employees (first_name, last_name, date_of_birth, gender, email, phone_number, address, username, password, position, department, active, permissions, jmbg)
+    SELECT 'Denis', 'Elezovic', '1997-11-05', 'M', 'elezovic@banka.rs', '', '', 'denis', crypt('denis123', gen_salt('bf', 10)), 'Agent', 'Retail', true, ARRAY['AGENT'], '0000000000008'
+    WHERE NOT EXISTS (SELECT 1 FROM employees WHERE username = 'denis');
+    
+    SELECT setval('employees_id_seq', GREATEST((SELECT MAX(id) FROM employees), 102));
+    
+    CREATE TABLE IF NOT EXISTS actuary_info (
+        employee_id   BIGINT PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,
+        limit_amount  NUMERIC NOT NULL DEFAULT 0,
+        used_limit    NUMERIC NOT NULL DEFAULT 0,
+        need_approval BOOLEAN NOT NULL DEFAULT false
+    );
+    
+    INSERT INTO actuary_info (employee_id, limit_amount, used_limit, need_approval)
+    SELECT id, 100000, 0, false
+    FROM employees
+    WHERE 'AGENT' = ANY(permissions)
+    ON CONFLICT (employee_id) DO NOTHING;
+    
+    \c exchange_db
+    CREATE TABLE currencies (
+        id          BIGSERIAL PRIMARY KEY,
+        name        VARCHAR NOT NULL,
+        code        VARCHAR NOT NULL UNIQUE,
+        symbol      VARCHAR NOT NULL,
+        country     VARCHAR NOT NULL,
+        description VARCHAR,
+        status      VARCHAR NOT NULL DEFAULT 'ACTIVE'
+    );
+    
+    INSERT INTO currencies (name, code, symbol, country, description, status) VALUES
+      ('Serbian Dinar',     'RSD', 'din',  'Serbia',         'Serbian national currency',    'ACTIVE'),
+      ('Euro',              'EUR', '€',    'European Union',  'EU common currency',           'ACTIVE'),
+      ('Swiss Franc',       'CHF', 'Fr',   'Switzerland',    'Swiss national currency',      'ACTIVE'),
+      ('US Dollar',         'USD', '$',    'United States',  'US national currency',         'ACTIVE'),
+      ('British Pound',     'GBP', '£',    'United Kingdom', 'UK national currency',         'ACTIVE'),
+      ('Japanese Yen',      'JPY', '¥',    'Japan',          'Japanese national currency',   'ACTIVE'),
+      ('Canadian Dollar',   'CAD', 'CA$',  'Canada',         'Canadian national currency',   'ACTIVE'),
+      ('Australian Dollar', 'AUD', 'AU$',  'Australia',      'Australian national currency', 'ACTIVE')
+    ON CONFLICT (code) DO NOTHING;
+    
+    CREATE TABLE exchange_rates (
+        from_currency VARCHAR NOT NULL,
+        to_currency   VARCHAR NOT NULL,
+        rate          NUMERIC(20, 6) NOT NULL,
+        PRIMARY KEY (from_currency, to_currency)
+    );
+    
+    INSERT INTO exchange_rates (from_currency, to_currency, rate) VALUES
+      ('RSD', 'EUR', 0.008547), ('EUR', 'RSD', 117.0),
+      ('RSD', 'USD', 0.009259), ('USD', 'RSD', 108.0),
+      ('RSD', 'CHF', 0.008621), ('CHF', 'RSD', 116.0),
+      ('RSD', 'GBP', 0.007353), ('GBP', 'RSD', 136.0),
+      ('RSD', 'JPY', 1.380000), ('JPY', 'RSD', 0.724638),
+      ('RSD', 'CAD', 0.012500), ('CAD', 'RSD', 80.0),
+      ('RSD', 'AUD', 0.014286), ('AUD', 'RSD', 70.0),
+      ('EUR', 'USD', 1.083),    ('USD', 'EUR', 0.923),
+      ('EUR', 'CHF', 1.008),    ('CHF', 'EUR', 0.992),
+      ('EUR', 'GBP', 0.860),    ('GBP', 'EUR', 1.163),
+      ('USD', 'CHF', 0.931),    ('CHF', 'USD', 1.074),
+      ('USD', 'GBP', 0.794),    ('GBP', 'USD', 1.259),
+      ('CHF', 'GBP', 0.854),    ('GBP', 'CHF', 1.170)
+    ON CONFLICT DO NOTHING;
+    
+    CREATE TABLE daily_exchange_rates (
+        id            BIGSERIAL PRIMARY KEY,
+        currency_code VARCHAR NOT NULL REFERENCES currencies(code),
+        buying_rate   NUMERIC(20, 6) NOT NULL,
+        selling_rate  NUMERIC(20, 6) NOT NULL,
+        middle_rate   NUMERIC(20, 6) NOT NULL,
+        date          DATE NOT NULL DEFAULT CURRENT_DATE,
+        UNIQUE (currency_code, date)
+    );
+    
+    CREATE TABLE exchange_transactions (
+        id            BIGSERIAL PRIMARY KEY,
+        client_id     BIGINT NOT NULL,
+        from_account  VARCHAR NOT NULL,
+        to_account    VARCHAR NOT NULL,
+        from_currency VARCHAR NOT NULL,
+        to_currency   VARCHAR NOT NULL,
+        from_amount   NUMERIC(20, 2) NOT NULL,
+        to_amount     NUMERIC(20, 2) NOT NULL,
+        rate          NUMERIC(20, 6) NOT NULL,
+        commission    NUMERIC(20, 2) NOT NULL,
+        timestamp     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        status        VARCHAR NOT NULL DEFAULT 'COMPLETED'
+    );
+    
+    \c fund_db
+    CREATE TABLE IF NOT EXISTS investment_funds (
+        id                   BIGSERIAL PRIMARY KEY,
+        name                 VARCHAR(100)   UNIQUE NOT NULL,
+        description          TEXT,
+        minimum_contribution DECIMAL(18,4)  NOT NULL,
+        manager_id           BIGINT         NOT NULL,
+        liquid_assets        DECIMAL(18,4)  NOT NULL DEFAULT 0,
+        account_id           BIGINT,
+        created_at           TIMESTAMP      NOT NULL DEFAULT NOW(),
+        active               BOOLEAN        NOT NULL DEFAULT TRUE
+    );
+    
+    CREATE TABLE IF NOT EXISTS client_fund_positions (
+        id                    BIGSERIAL PRIMARY KEY,
+        client_id             BIGINT         NOT NULL,
+        client_type           VARCHAR(10)    NOT NULL DEFAULT 'CLIENT',
+        fund_id               BIGINT         NOT NULL REFERENCES investment_funds(id),
+        total_invested_amount DECIMAL(18,4)  NOT NULL DEFAULT 0,
+        last_modified_at      TIMESTAMP      NOT NULL DEFAULT NOW(),
+        UNIQUE(client_id, client_type, fund_id)
+    );
+    
+    CREATE TABLE IF NOT EXISTS fund_portfolio_positions (
+        id               BIGSERIAL PRIMARY KEY,
+        fund_id          BIGINT        NOT NULL REFERENCES investment_funds(id),
+        listing_id       BIGINT        NOT NULL,
+        quantity         NUMERIC(20,6) NOT NULL DEFAULT 0,
+        average_cost     DECIMAL(18,4) NOT NULL DEFAULT 0,
+        acquisition_date DATE          NOT NULL DEFAULT CURRENT_DATE,
+        UNIQUE(fund_id, listing_id)
+    );
+    
+    CREATE TABLE IF NOT EXISTS client_fund_transactions (
+        id                     BIGSERIAL PRIMARY KEY,
+        client_id              BIGINT        NOT NULL,
+        client_type            VARCHAR(10)   NOT NULL DEFAULT 'CLIENT',
+        fund_id                BIGINT        NOT NULL REFERENCES investment_funds(id),
+        amount                 DECIMAL(18,4) NOT NULL,
+        is_inflow              BOOLEAN       NOT NULL,
+        status                 VARCHAR(20)   NOT NULL DEFAULT 'PENDING',
+        destination_account_id BIGINT,
+        timestamp              TIMESTAMP     NOT NULL DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS fund_performance_history (
+        id         BIGSERIAL PRIMARY KEY,
+        fund_id    BIGINT        NOT NULL REFERENCES investment_funds(id),
+        date       DATE          NOT NULL,
+        fund_value DECIMAL(18,4) NOT NULL,
+        profit     DECIMAL(18,4) NOT NULL,
+        UNIQUE(fund_id, date)
+    );
+    
+    \c loan_db
+    CREATE TABLE IF NOT EXISTS loans (
+        id                      BIGSERIAL PRIMARY KEY,
+        loan_number             BIGINT      NOT NULL UNIQUE,
+        account_number          VARCHAR     NOT NULL,
+        client_id               BIGINT      NOT NULL,
+        loan_type               VARCHAR     NOT NULL,
+        interest_rate_type      VARCHAR     NOT NULL,
+        amount                  NUMERIC(20, 2) NOT NULL,
+        currency                VARCHAR     NOT NULL,
+        repayment_period        INT         NOT NULL,
+        nominal_rate            NUMERIC(10, 4) NOT NULL,
+        effective_rate          NUMERIC(10, 4) NOT NULL,
+        agreed_date             DATE        NOT NULL DEFAULT CURRENT_DATE,
+        maturity_date           DATE        NOT NULL,
+        next_installment_amount NUMERIC(20, 2),
+        next_installment_date   DATE,
+        remaining_debt          NUMERIC(20, 2),
+        status                  VARCHAR     NOT NULL DEFAULT 'PENDING',
+        purpose                 VARCHAR,
+        monthly_salary          NUMERIC(20, 2),
+        employment_status       VARCHAR,
+        employment_period       INT,
+        contact_phone           VARCHAR
+    );
+    
+    CREATE TABLE IF NOT EXISTS loan_installments (
+        id                  BIGSERIAL PRIMARY KEY,
+        loan_id             BIGINT      NOT NULL REFERENCES loans(id),
+        installment_amount  NUMERIC(20, 2) NOT NULL,
+        interest_rate       NUMERIC(10, 4) NOT NULL,
+        currency            VARCHAR     NOT NULL,
+        expected_due_date   DATE        NOT NULL,
+        actual_due_date     DATE,
+        status              VARCHAR     NOT NULL DEFAULT 'UNPAID',
+        retry_count         INT         NOT NULL DEFAULT 0,
+        last_retry_at       TIMESTAMPTZ
+    );
+    
+    \c order_db
+    CREATE TYPE order_type_enum AS ENUM ('MARKET', 'LIMIT', 'STOP', 'STOP_LIMIT');
+    CREATE TYPE order_direction AS ENUM ('BUY', 'SELL');
+    CREATE TYPE order_status AS ENUM ('PENDING', 'APPROVED', 'DECLINED');
+    
+    CREATE TABLE orders (
+        id                 BIGSERIAL PRIMARY KEY,
+        user_id            BIGINT          NOT NULL,
+        user_type          VARCHAR(10)     NOT NULL DEFAULT 'CLIENT',
+        asset_id           BIGINT          NOT NULL,
+        order_type         order_type_enum NOT NULL,
+        quantity           INT             NOT NULL,
+        contract_size      INT             NOT NULL DEFAULT 1,
+        price_per_unit     NUMERIC(20,6)   NOT NULL DEFAULT 0,
+        limit_value        NUMERIC(20,6),
+        stop_value         NUMERIC(20,6),
+        direction          order_direction NOT NULL,
+        status             order_status    NOT NULL DEFAULT 'PENDING',
+        approved_by        BIGINT,
+        is_done            BOOLEAN         NOT NULL DEFAULT FALSE,
+        last_modification  TIMESTAMP       NOT NULL DEFAULT NOW(),
+        remaining_portions INT             NOT NULL DEFAULT 0,
+        after_hours        BOOLEAN         NOT NULL DEFAULT FALSE,
+        is_aon             BOOLEAN         NOT NULL DEFAULT FALSE,
+        is_margin          BOOLEAN         NOT NULL DEFAULT FALSE,
+        account_id         BIGINT          NOT NULL,
+        fund_id            BIGINT          NOT NULL DEFAULT 0
+    );
+    
+    CREATE TABLE order_portions (
+        id        BIGSERIAL PRIMARY KEY,
+        order_id  BIGINT        NOT NULL REFERENCES orders(id),
+        quantity  INT           NOT NULL,
+        price     NUMERIC(20,6) NOT NULL,
+        filled_at TIMESTAMP     NOT NULL DEFAULT NOW()
+    );
+    
+    \c otc_db
+    CREATE TABLE IF NOT EXISTS otc_negotiations (
+        id               BIGSERIAL PRIMARY KEY,
+        ticker           VARCHAR(20)    NOT NULL,
+        seller_id        BIGINT         NOT NULL,
+        seller_type      VARCHAR(10)    NOT NULL DEFAULT 'CLIENT',
+        buyer_id         BIGINT         NOT NULL,
+        buyer_type       VARCHAR(10)    NOT NULL DEFAULT 'CLIENT',
+        amount           INT            NOT NULL,
+        price_per_stock  DECIMAL(18,4)  NOT NULL,
+        settlement_date  DATE           NOT NULL,
+        premium          DECIMAL(18,4)  NOT NULL,
+        currency         VARCHAR(10)    NOT NULL,
+        last_modified    TIMESTAMP      NOT NULL DEFAULT NOW(),
+        modified_by_id   BIGINT,
+        modified_by_type VARCHAR(10),
+        status           VARCHAR(20)    NOT NULL DEFAULT 'PENDING_SELLER'
+    );
+    
+    CREATE TABLE IF NOT EXISTS otc_contracts (
+        id               BIGSERIAL PRIMARY KEY,
+        negotiation_id   BIGINT NOT NULL UNIQUE REFERENCES otc_negotiations(id),
+        seller_id        BIGINT NOT NULL,
+        seller_type      VARCHAR(10) NOT NULL,
+        buyer_id         BIGINT NOT NULL,
+        buyer_type       VARCHAR(10) NOT NULL,
+        ticker           VARCHAR(20) NOT NULL,
+        amount           INT NOT NULL,
+        strike_price     DECIMAL(18,4) NOT NULL,
+        premium          DECIMAL(18,4) NOT NULL,
+        currency         VARCHAR(10) NOT NULL,
+        settlement_date  DATE NOT NULL,
+        status           VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+        created_at       TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS otc_saga_log (
+        id           BIGSERIAL PRIMARY KEY,
+        contract_id  BIGINT NOT NULL REFERENCES otc_contracts(id),
+        step         INT NOT NULL,
+        status       VARCHAR(20) NOT NULL,
+        timestamp    TIMESTAMP NOT NULL DEFAULT NOW(),
+        error_msg    TEXT
+    );
+    
+    \c payment_db
+    CREATE TABLE payment_recipients (
+        id             BIGSERIAL PRIMARY KEY,
+        client_id      BIGINT    NOT NULL,
+        name           VARCHAR   NOT NULL,
+        account_number VARCHAR   NOT NULL,
+        "order"        INT       NOT NULL DEFAULT 0
+    );
+    
+    CREATE TABLE transfers (
+        id             BIGSERIAL PRIMARY KEY,
+        order_number   VARCHAR        NOT NULL UNIQUE,
+        from_account   VARCHAR        NOT NULL,
+        to_account     VARCHAR        NOT NULL,
+        initial_amount NUMERIC(20, 2) NOT NULL,
+        final_amount   NUMERIC(20, 2) NOT NULL,
+        exchange_rate  NUMERIC(20, 6) NOT NULL DEFAULT 1,
+        fee            NUMERIC(20, 2) NOT NULL DEFAULT 0,
+        timestamp      TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+    );
+    
+    CREATE TABLE payments (
+        id               BIGSERIAL PRIMARY KEY,
+        order_number     VARCHAR     NOT NULL UNIQUE,
+        from_account     VARCHAR     NOT NULL,
+        to_account       VARCHAR     NOT NULL,
+        initial_amount   NUMERIC(20, 2) NOT NULL,
+        final_amount     NUMERIC(20, 2) NOT NULL,
+        fee              NUMERIC(20, 2) NOT NULL DEFAULT 0,
+        recipient_id     BIGINT REFERENCES payment_recipients(id),
+        payment_code     VARCHAR,
+        reference_number VARCHAR,
+        purpose          VARCHAR,
+        timestamp        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        status           VARCHAR     NOT NULL DEFAULT 'PROCESSING'
+    );
+    
+    \c portfolio_db
+    CREATE TABLE portfolio_entry (
+        id            BIGSERIAL     PRIMARY KEY,
+        user_id       BIGINT        NOT NULL,
+        user_type     VARCHAR(10)   NOT NULL DEFAULT 'CLIENT',
+        listing_id    BIGINT        NOT NULL,
+        amount        INT           NOT NULL DEFAULT 0,
+        buy_price     NUMERIC(20,6) NOT NULL DEFAULT 0,
+        last_modified TIMESTAMP     NOT NULL DEFAULT NOW(),
+        is_public     BOOLEAN       NOT NULL DEFAULT FALSE,
+        public_amount INT           NOT NULL DEFAULT 0,
+        account_id    BIGINT        NOT NULL,
+        UNIQUE(user_id, user_type, listing_id)
+    );
+    
+    CREATE TABLE tax_record (
+        id         BIGSERIAL     PRIMARY KEY,
+        user_id    BIGINT        NOT NULL,
+        user_type  VARCHAR(10)   NOT NULL DEFAULT 'CLIENT',
+        amount_rsd NUMERIC(20,6) NOT NULL,
+        month      INT           NOT NULL,
+        year       INT           NOT NULL,
+        is_paid    BOOLEAN       NOT NULL DEFAULT FALSE,
+        paid_at    TIMESTAMP
+    );
+    
+    \c securities_db
+    CREATE TABLE stock_exchanges (
+        id       BIGSERIAL    PRIMARY KEY,
+        name     VARCHAR(255) NOT NULL,
+        acronym  VARCHAR(20)  NOT NULL,
+        mic_code VARCHAR(10)  NOT NULL UNIQUE,
+        polity   VARCHAR(100) NOT NULL,
+        currency VARCHAR(100) NOT NULL,
+        timezone VARCHAR(50)  NOT NULL
+    );
+    
+    CREATE TABLE exchange_working_hours (
+        id         BIGSERIAL    PRIMARY KEY,
+        polity     VARCHAR(100) NOT NULL,
+        segment    VARCHAR(20)  NOT NULL,
+        open_time  TIME         NOT NULL,
+        close_time TIME         NOT NULL,
+        UNIQUE (polity, segment)
+    );
+    
+    CREATE TABLE exchange_holidays (
+        id           BIGSERIAL    PRIMARY KEY,
+        polity       VARCHAR(100) NOT NULL,
+        holiday_date DATE         NOT NULL,
+        description  VARCHAR(255),
+        UNIQUE (polity, holiday_date)
+    );
+    
+    CREATE TABLE settings (
+        id                BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id = TRUE),
+        test_mode_enabled BOOLEAN NOT NULL DEFAULT FALSE
+    );
+    INSERT INTO settings (test_mode_enabled) VALUES (FALSE);
+    
+    CREATE TYPE listing_type AS ENUM ('STOCK', 'FOREX_PAIR', 'FUTURES_CONTRACT', 'OPTION');
+    CREATE TYPE liquidity_level AS ENUM ('HIGH', 'MEDIUM', 'LOW');
+    CREATE TYPE option_type_enum AS ENUM ('CALL', 'PUT');
+    
+    CREATE TABLE listing (
+        id           BIGSERIAL     PRIMARY KEY,
+        ticker       VARCHAR(20)   NOT NULL UNIQUE,
+        name         VARCHAR(255)  NOT NULL,
+        exchange_id  BIGINT        NOT NULL REFERENCES stock_exchanges(id),
+        last_refresh TIMESTAMP,
+        price        NUMERIC(20,6) NOT NULL DEFAULT 0,
+        ask          NUMERIC(20,6) NOT NULL DEFAULT 0,
+        bid          NUMERIC(20,6) NOT NULL DEFAULT 0,
+        volume       BIGINT        NOT NULL DEFAULT 0,
+        change       NUMERIC(20,6) NOT NULL DEFAULT 0,
+        type         listing_type  NOT NULL
+    );
+    
+    CREATE TABLE listing_daily_price_info (
+        id         BIGSERIAL     PRIMARY KEY,
+        listing_id BIGINT        NOT NULL REFERENCES listing(id) ON DELETE CASCADE,
+        date       DATE          NOT NULL,
+        price      NUMERIC(20,6) NOT NULL,
+        ask        NUMERIC(20,6) NOT NULL,
+        bid        NUMERIC(20,6) NOT NULL,
+        change     NUMERIC(20,6) NOT NULL DEFAULT 0,
+        volume     BIGINT        NOT NULL DEFAULT 0,
+        UNIQUE (listing_id, date)
+    );
+    
+    CREATE TABLE listing_stock (
+        listing_id         BIGINT        PRIMARY KEY REFERENCES listing(id) ON DELETE CASCADE,
+        outstanding_shares BIGINT        NOT NULL DEFAULT 0,
+        dividend_yield     NUMERIC(10,6) NOT NULL DEFAULT 0
+    );
+    
+    CREATE TABLE listing_forex_pair (
+        listing_id     BIGINT          PRIMARY KEY REFERENCES listing(id) ON DELETE CASCADE,
+        base_currency  VARCHAR(10)     NOT NULL,
+        quote_currency VARCHAR(10)     NOT NULL,
+        liquidity      liquidity_level NOT NULL DEFAULT 'MEDIUM'
+    );
+    
+    CREATE TABLE listing_futures_contract (
+        listing_id      BIGINT        PRIMARY KEY REFERENCES listing(id) ON DELETE CASCADE,
+        contract_size   NUMERIC(20,6) NOT NULL DEFAULT 1,
+        contract_unit   VARCHAR(50)   NOT NULL DEFAULT '',
+        settlement_date DATE
+    );
+    
+    CREATE TABLE listing_option (
+        listing_id         BIGINT           PRIMARY KEY REFERENCES listing(id) ON DELETE CASCADE,
+        stock_listing_id   BIGINT           NOT NULL REFERENCES listing(id),
+        option_type        option_type_enum NOT NULL,
+        strike_price       NUMERIC(20,6)    NOT NULL DEFAULT 0,
+        implied_volatility NUMERIC(10,6)    NOT NULL DEFAULT 0,
+        open_interest      BIGINT           NOT NULL DEFAULT 0,
+        settlement_date    DATE
+    );
+    
+---
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: exbanka-db
+  namespace: exbanka-4
+spec:
+  postgresVersion: 16
+  instances:
+    - name: instance1
+      replicas: 3
+      dataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  backups:
+    pgbackrest:
+      repos:
+        - name: repo1
+          volume:
+            volumeClaimSpec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 5Gi
+  users:
+    - name: account_user
+      databases:
+        - account_db
+    - name: auth_user
+      databases:
+        - auth_db
+    - name: card_user
+      databases:
+        - card_db
+    - name: client_user
+      databases:
+        - client_db
+    - name: employee_user
+      databases:
+        - employee_db
+    - name: exchange_user
+      databases:
+        - exchange_db
+    - name: fund_user
+      databases:
+        - fund_db
+    - name: loan_user
+      databases:
+        - loan_db
+    - name: order_user
+      databases:
+        - order_db
+    - name: otc_user
+      databases:
+        - otc_db
+    - name: payment_user
+      databases:
+        - payment_db
+    - name: portfolio_user
+      databases:
+        - portfolio_db
+    - name: securities_user
+      databases:
+        - securities_db
+  databaseInitSQL:
+    name: exbanka-init-sql
+    key: init.sql

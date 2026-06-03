@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: service-config
-  namespace: exbanka
+  namespace: exbanka-4
 data:
   EMPLOYEE_SERVICE_ADDR: "employee-service:50051"
   AUTH_SERVICE_ADDR: "auth-service:50052"
@@ -19,7 +19,7 @@ data:
   OTC_SERVICE_ADDR: "otc-service:50063"
   FUND_SERVICE_ADDR: "fund-service:50064"
   FRONTEND_URL: "http://frontend"
-  API_URL: "https://changeme.example.com/api-gateway"
+  API_URL: "https://exbanka-4.radenkovic.rs/api"
   REDIS_ADDR: "redis:6379"
   OWN_ROUTING_NUMBER: "888"
   PARTNER_ROUTING_NUMBER: "placeholder"

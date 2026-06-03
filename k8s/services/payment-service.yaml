@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payment-service
-  namespace: exbanka
+  namespace: exbanka-4
 spec:
   replicas: 1
   selector:
@@ -21,23 +21,23 @@ spec:
             - name: PAYMENT_DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: db-secrets
-                  key: payment-db-url
+                  name: exbanka-db-pguser-payment_user
+                  key: uri
             - name: ACCOUNT_DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: db-secrets
-                  key: account-db-url
+                  name: exbanka-db-pguser-account_user
+                  key: uri
             - name: EXCHANGE_DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: db-secrets
-                  key: exchange-db-url
+                  name: exbanka-db-pguser-exchange_user
+                  key: uri
             - name: CLIENT_DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: db-secrets
-                  key: client-db-url
+                  name: exbanka-db-pguser-client_user
+                  key: uri
             - name: OWN_ROUTING_NUMBER
               valueFrom:
                 configMapKeyRef:
@@ -80,7 +80,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: payment-service
-  namespace: exbanka
+  namespace: exbanka-4
 spec:
   selector:
     app: payment-service
