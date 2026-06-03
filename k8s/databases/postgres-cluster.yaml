@@ -77,6 +77,9 @@ data:
     VALUES ('STATE-RSD-001', 'State RSD Account', 0, 0, 1, 'STATE', 0, 0)
     ON CONFLICT (account_number) DO NOTHING;
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "account-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "account-user";
+
     \c auth_db
     CREATE TABLE activation_tokens (
         token       VARCHAR PRIMARY KEY,
@@ -116,6 +119,9 @@ data:
         token       VARCHAR  NOT NULL
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "auth-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "auth-user";
+
     \c card_db
     CREATE TABLE authorized_persons (
         id             BIGSERIAL PRIMARY KEY,
@@ -156,6 +162,9 @@ data:
         authorized_person_id BIGINT        REFERENCES authorized_persons(id)
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "card-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "card-user";
+
     \c client_db
     CREATE TABLE clients (
         id            BIGSERIAL PRIMARY KEY,
@@ -176,6 +185,9 @@ data:
     SELECT 'Tara', 'Dunjic', '2809002785018', '2002-09-28', 'F', 'ddimitrijevi822rn@raf.rs', '+381601234567', 'Bulevar oslobodjenja 1, Beograd', 'ddimitrijevi822rn', '$2a$10$KZiA1q9EmV1PlRI0/m7i7e8a2GgitlGORbgHEbb9Y9ZUNYpxyfY.u', true
     WHERE NOT EXISTS (SELECT 1 FROM clients WHERE email = 'ddimitrijevi822rn@raf.rs');
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "client-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "client-user";
+
     \c employee_db
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     
@@ -248,6 +260,9 @@ data:
     WHERE 'AGENT' = ANY(permissions)
     ON CONFLICT (employee_id) DO NOTHING;
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "employee-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "employee-user";
+
     \c exchange_db
     CREATE TABLE currencies (
         id          BIGSERIAL PRIMARY KEY,
@@ -318,6 +333,10 @@ data:
         status        VARCHAR NOT NULL DEFAULT 'COMPLETED'
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "exchange-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "exchange-user";
+    GRANT CREATE ON SCHEMA public TO "exchange-user";
+
     \c fund_db
     CREATE TABLE IF NOT EXISTS investment_funds (
         id                   BIGSERIAL PRIMARY KEY,
@@ -372,6 +391,9 @@ data:
         UNIQUE(fund_id, date)
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "fund-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "fund-user";
+
     \c loan_db
     CREATE TABLE IF NOT EXISTS loans (
         id                      BIGSERIAL PRIMARY KEY,
@@ -411,6 +433,9 @@ data:
         last_retry_at       TIMESTAMPTZ
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "loan-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "loan-user";
+
     \c order_db
     CREATE TYPE order_type_enum AS ENUM ('MARKET', 'LIMIT', 'STOP', 'STOP_LIMIT');
     CREATE TYPE order_direction AS ENUM ('BUY', 'SELL');
@@ -448,6 +473,9 @@ data:
         filled_at TIMESTAMP     NOT NULL DEFAULT NOW()
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "order-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "order-user";
+
     \c otc_db
     CREATE TABLE IF NOT EXISTS otc_negotiations (
         id               BIGSERIAL PRIMARY KEY,
@@ -493,6 +521,9 @@ data:
         error_msg    TEXT
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "otc-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "otc-user";
+
     \c payment_db
     CREATE TABLE payment_recipients (
         id             BIGSERIAL PRIMARY KEY,
@@ -530,6 +561,9 @@ data:
         status           VARCHAR     NOT NULL DEFAULT 'PROCESSING'
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "payment-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "payment-user";
+
     \c portfolio_db
     CREATE TABLE portfolio_entry (
         id            BIGSERIAL     PRIMARY KEY,
@@ -556,6 +590,9 @@ data:
         paid_at    TIMESTAMP
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "portfolio-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "portfolio-user";
+
     \c securities_db
     CREATE TABLE stock_exchanges (
         id       BIGSERIAL    PRIMARY KEY,
@@ -650,6 +687,9 @@ data:
         settlement_date    DATE
     );
     
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "securities-user";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "securities-user";
+
 ---
 apiVersion: postgres-operator.crunchydata.com/v1beta1
 kind: PostgresCluster
