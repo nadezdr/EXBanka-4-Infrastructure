@@ -556,6 +556,7 @@ services:
       ACCOUNT_DB_URL: postgres://account_user:account_pass@account-db:5432/account_db?sslmode=disable
       PORTFOLIO_DB_URL: postgres://portfolio_user:portfolio_pass@portfolio-db:5432/portfolio_db?sslmode=disable
       SECURITIES_DB_URL: postgres://securities_user:securities_pass@securities-db:5432/securities_db?sslmode=disable
+      EXCHANGE_DB_URL: postgres://exchange_user:exchange_pass@exchange-db:5432/exchange_db?sslmode=disable
       OWN_ROUTING_NUMBER: "888"
       PARTNER_ROUTING_NUMBER: "placeholder"
       PARTNER_BANK_NAME: "Partner Bank"
@@ -573,6 +574,8 @@ services:
       portfolio-db:
         condition: service_healthy
       securities-db:
+        condition: service_healthy
+      exchange-db:
         condition: service_healthy
     networks: [exbanka-net]
 
