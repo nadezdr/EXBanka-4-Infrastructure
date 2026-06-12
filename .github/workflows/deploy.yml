@@ -24,7 +24,7 @@ jobs:
       - name: Apply namespace and base config
         run: |
           kubectl apply -f k8s/00-namespace.yaml
-          kubectl apply -f k8s/01-secrets.yaml
+          echo "${{ secrets.K8S_SECRETS }}" | base64 -d | kubectl apply -f -
           kubectl apply -f k8s/02-configmap.yaml
 
       - name: Apply databases
