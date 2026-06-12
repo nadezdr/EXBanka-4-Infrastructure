@@ -105,8 +105,8 @@ spec:
                   key: REDIS_ADDR
             - name: OWN_INTERBANK_API_KEY
               valueFrom:
-                configMapKeyRef:
-                  name: service-config
+                secretKeyRef:
+                  name: app-secrets
                   key: OWN_INTERBANK_API_KEY
           resources:
             requests:

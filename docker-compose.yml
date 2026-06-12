@@ -360,7 +360,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: http://localhost:3000
       REDIS_ADDR: redis:6379
-      OWN_INTERBANK_API_KEY: "placeholder-own-key"
+      OWN_INTERBANK_API_KEY: "ek_exbanka4_1c715bd146a3ef672b6519349dc3419b2c37f875be0cc10c"
       OWN_ROUTING_NUMBER: "888"
       PARTNER_ROUTING_NUMBER: "444"
       PARTNER_BANK_NAME: "Banka 4"

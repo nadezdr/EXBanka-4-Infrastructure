@@ -60,8 +60,8 @@ spec:
                   key: PARTNER_BANK_URL
             - name: PARTNER_API_KEY
               valueFrom:
-                configMapKeyRef:
-                  name: service-config
+                secretKeyRef:
+                  name: app-secrets
                   key: PARTNER_API_KEY
           resources:
             requests:
