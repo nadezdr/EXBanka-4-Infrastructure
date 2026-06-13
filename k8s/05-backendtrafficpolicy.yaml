@@ -1,0 +1,13 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: exbanka-4-timeout
+  namespace: exbanka-4
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: exbanka-4
+  timeout:
+    http:
+      requestTimeout: 60s
