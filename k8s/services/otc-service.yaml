@@ -78,11 +78,6 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: PARTNER_API_KEY
-            - name: OWN_INTERBANK_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: OWN_INTERBANK_API_KEY
           resources:
             requests:
               cpu: "50m"
