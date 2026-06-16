@@ -198,27 +198,20 @@
         condition: service_healthy
     networks: [exbanka-net]
 
-  mailhog:
-    image: mailhog/mailhog:latest
-    ports:
-      - "1025:1025"
-      - "8025:8025"
-    networks: [exbanka-net]
-
   email-service:
     build:
       context: ../EXBanka-4-Backend
       dockerfile: services/email-service/Dockerfile
     environment:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-      SMTP_HOST: mailhog
-      SMTP_PORT: 1025
-      FROM_EMAIL: noreply@exbanka.local
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      FROM_EMAIL: ${FROM_EMAIL}
     depends_on:
       rabbitmq:
         condition: service_healthy
-      mailhog:
-        condition: service_started
     networks: [exbanka-net]
 
   auth-service:
@@ -627,7 +620,7 @@
       exchange-db:
         condition: service_healthy
       rabbitmq:
-        condition: service_healthy
+        condition: service_started
     networks: [exbanka-net]
 
   fund-db:
