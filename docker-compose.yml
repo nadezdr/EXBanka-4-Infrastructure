@@ -198,20 +198,27 @@
         condition: service_healthy
     networks: [exbanka-net]
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks: [exbanka-net]
+
   email-service:
     build:
       context: ../EXBanka-4-Backend
       dockerfile: services/email-service/Dockerfile
     environment:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      FROM_EMAIL: ${FROM_EMAIL}
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      FROM_EMAIL: noreply@exbanka.local
     depends_on:
       rabbitmq:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     networks: [exbanka-net]
 
   auth-service:
@@ -441,16 +448,24 @@
     environment:
       SECURITIES_DB_URL: postgres://securities_user:securities_pass@securities-db:5432/securities_db?sslmode=disable
       EMPLOYEE_SERVICE_ADDR: employee-service:50051
+      CLIENT_SERVICE_ADDR: client-service:50056
       ALPACA_API_KEY: ${ALPACA_API_KEY}
       ALPACA_API_SECRET_KEY: ${ALPACA_API_SECRET_KEY}
       ALPHAVANTAGE_API_KEY: ${ALPHAVANTAGE_API_KEY}
       REDIS_ADDR: redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PRICE_REFRESH_INTERVAL: 1m
+      FUND_SERVICE_ADDR: fund-service:50064
     depends_on:
       securities-db:
         condition: service_healthy
       employee-service:
         condition: service_started
+      client-service:
+        condition: service_started
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks: [exbanka-net]
 
@@ -486,6 +501,9 @@
       EXCHANGE_SERVICE_ADDR: exchange-service:50057
       PORTFOLIO_SERVICE_ADDR: portfolio-service:50062
       FUND_SERVICE_ADDR: fund-service:50064
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      AUTH_SERVICE_ADDR: auth-service:50054
+      CLIENT_SERVICE_ADDR: client-service:50056
     depends_on:
       order-db:
         condition: service_healthy
@@ -508,6 +526,12 @@
       portfolio-service:
         condition: service_started
       fund-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      client-service:
         condition: service_started
     networks: [exbanka-net]
 
@@ -586,6 +610,7 @@
       PARTNER_BANK_NAME: "Banka 4"
       PARTNER_BANK_URL: "http://rafsi.davidovic.io:8083"
       PARTNER_API_KEY: "bank4-secret-key"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     depends_on:
       otc-db:
         condition: service_healthy
@@ -600,6 +625,8 @@
       securities-db:
         condition: service_healthy
       exchange-db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks: [exbanka-net]
 
@@ -632,6 +659,7 @@
       ORDER_SERVICE_ADDR: order-service:50061
       EXCHANGE_SERVICE_ADDR: exchange-service:50057
       SECURITIES_SERVICE_ADDR: securities-service:50060
+      PORTFOLIO_SERVICE_ADDR: portfolio-service:50062
     depends_on:
       fund-db:
         condition: service_healthy
@@ -646,6 +674,8 @@
       exchange-service:
         condition: service_started
       securities-service:
+        condition: service_started
+      portfolio-service:
         condition: service_started
     networks: [exbanka-net]
 
