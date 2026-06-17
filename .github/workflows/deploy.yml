@@ -30,9 +30,6 @@ jobs:
       - name: Apply databases
         run: kubectl apply -f k8s/databases/ --recursive
 
-      - name: Apply services
-        run: kubectl apply -f k8s/services/ --recursive
-
       - name: Apply frontend
         run: kubectl apply -f k8s/frontend/ --recursive
 
