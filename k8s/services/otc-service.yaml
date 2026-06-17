@@ -78,6 +78,11 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: PARTNER_API_KEY
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: RABBITMQ_URL
           resources:
             requests:
               cpu: "50m"
